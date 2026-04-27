@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.02 alpha
+
+- Hid reasoning and draft text from chat replies.
+- Added an OpenRouter reasoning exclusion flag for compatible models.
+
 ## 0.01 alpha
 
 - Initial public alpha release.

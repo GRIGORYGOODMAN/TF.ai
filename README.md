@@ -1,6 +1,6 @@
 # TF.ai
 
-**Version:** 0.01 alpha
+**Version:** 0.02 alpha
 
 TF.ai is a local-first character chat client built with Flutter. It can talk to a local Ollama server or to any OpenAI-compatible chat completions API.
 

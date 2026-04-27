@@ -151,7 +151,7 @@ Write the updated memory. Use short bullets. Preserve names and important wordin
         throw OllamaException(_emptyResponseMessage(decoded));
       }
 
-      return content.trim();
+      return _visibleAssistantContent(content).trim();
     } on SocketException catch (error) {
       if (cancelToken?.isCancelled ?? false) {
         throw const OllamaException('Generation stopped.');
@@ -221,7 +221,7 @@ Write the updated memory. Use short bullets. Preserve names and important wordin
         throw OllamaException(_emptyResponseMessage(decoded));
       }
 
-      return content.trim();
+      return _visibleAssistantContent(content).trim();
     } on SocketException catch (error) {
       if (cancelToken?.isCancelled ?? false) {
         throw const OllamaException('Generation stopped.');
@@ -411,12 +411,18 @@ Write the updated memory. Use short bullets. Preserve names and important wordin
     String? instruction,
   }) {
     final oneShotInstruction = instruction?.trim();
-    return {
+    final body = <String, dynamic>{
       'model': settings.activeModel,
       'messages': _messages(history, oneShotInstruction),
       'temperature': settings.temperature,
       'max_tokens': settings.maxTokens,
     };
+
+    if (_isOpenRouterEndpoint(settings.apiBaseUrl)) {
+      body['reasoning'] = {'exclude': true};
+    }
+
+    return body;
   }
 
   List<Map<String, String>> _messages(
@@ -428,6 +434,7 @@ Write the updated memory. Use short bullets. Preserve names and important wordin
         'role': 'system',
         'content': settings.buildSystemPrompt(autoMemory: autoMemory),
       },
+      {'role': 'system', 'content': _finalAnswerOnlyInstruction},
       if (oneShotInstruction != null && oneShotInstruction.isNotEmpty)
         {
           'role': 'system',
@@ -477,6 +484,100 @@ Write the updated memory. Use short bullets. Preserve names and important wordin
     }
 
     return null;
+  }
+
+  String _visibleAssistantContent(String rawContent) {
+    final original = rawContent.trim();
+    var text = original;
+
+    text = text
+        .replaceAll(
+          RegExp(r'<think>[\s\S]*?</think>', caseSensitive: false),
+          '',
+        )
+        .replaceAll(
+          RegExp(r'<thinking>[\s\S]*?</thinking>', caseSensitive: false),
+          '',
+        )
+        .trim();
+
+    final markerExtracted = _extractAfterFinalMarker(text);
+    if (markerExtracted != null) {
+      return markerExtracted;
+    }
+
+    final quotedDraft = _extractQuotedDraft(text);
+    if (quotedDraft != null) {
+      return quotedDraft;
+    }
+
+    return text.trim().isEmpty ? original : text.trim();
+  }
+
+  String? _extractAfterFinalMarker(String text) {
+    const markers = [
+      'Final answer:',
+      'Final response:',
+      'Answer:',
+      'Ответ:',
+      'Итоговый ответ:',
+      'Финальный ответ:',
+    ];
+    var markerIndex = -1;
+    var markerLength = 0;
+    for (final marker in markers) {
+      final index = text.toLowerCase().lastIndexOf(marker.toLowerCase());
+      if (index > markerIndex) {
+        markerIndex = index;
+        markerLength = marker.length;
+      }
+    }
+
+    if (markerIndex < 0) {
+      return null;
+    }
+
+    final result = text.substring(markerIndex + markerLength).trim();
+    return result.isEmpty ? null : _stripWrappingQuotes(result);
+  }
+
+  String? _extractQuotedDraft(String text) {
+    final hasDraftMarker =
+        text.contains('Примерный ответ') ||
+        text.contains('Возможный ответ') ||
+        text.toLowerCase().contains('draft answer') ||
+        text.toLowerCase().contains('sample answer');
+    if (!hasDraftMarker) {
+      return null;
+    }
+
+    final matches = RegExp(
+      r'["“«]([^"”»]{12,})["”»]',
+      multiLine: true,
+    ).allMatches(text).toList();
+    if (matches.isEmpty) {
+      return null;
+    }
+
+    final result = matches.last.group(1)?.trim();
+    return result == null || result.isEmpty ? null : result;
+  }
+
+  String _stripWrappingQuotes(String text) {
+    var result = text.trim();
+    while (result.length >= 2) {
+      final first = result[0];
+      final last = result[result.length - 1];
+      final wraps =
+          (first == '"' && last == '"') ||
+          (first == '“' && last == '”') ||
+          (first == '«' && last == '»');
+      if (!wraps) {
+        break;
+      }
+      result = result.substring(1, result.length - 1).trim();
+    }
+    return result;
   }
 
   String? _extractContent(Map<String, dynamic> decoded) {
@@ -562,7 +663,14 @@ Write the updated memory. Use short bullets. Preserve names and important wordin
         : host;
     return '$normalizedHost$path';
   }
+
+  bool _isOpenRouterEndpoint(String baseUrl) {
+    return Uri.tryParse(baseUrl.trim())?.host.toLowerCase() == 'openrouter.ai';
+  }
 }
+
+const _finalAnswerOnlyInstruction =
+    'Response format: write only the final message that should be shown in the chat. Do not reveal analysis, chain-of-thought, planning, self-checks, draft notes, or prompt interpretation. Do not write phrases like "I will think", "Need to answer", "Draft answer", "Примерный ответ", or "Сначала подумаю". If reasoning is needed, keep it internal.';
 
 class OllamaException implements Exception {
   const OllamaException(this.message);
