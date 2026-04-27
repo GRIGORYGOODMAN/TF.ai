@@ -6,22 +6,6 @@ TF.ai is a local-first character chat client built with Flutter. It can talk to 
 
 The app is designed for private character chats, editable character profiles, per-chat memory, and simple desktop-first use before mobile packaging.
 
-## Features
-
-- Local Ollama mode
-- OpenAI-compatible API mode
-- Character library
-- Multiple chats per character
-- Editable system prompt, scenario, first message, examples, memory, and lore
-- Manual and generated chat memory summaries
-- Avatar and background image picker
-- Provider presets for Ollama, LM Studio, OpenAI, and OpenRouter
-- Final prompt debug viewer
-- Supabase-backed public catalog
-- Supabase email/password accounts for publishing
-- Windows desktop build
-- Android project scaffold
-
 ## Requirements
 
 - Flutter 3.41 or newer
