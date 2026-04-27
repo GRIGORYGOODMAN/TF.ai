@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TF.ai Account Confirmed</title>
+    <meta name="description" content="TF.ai account confirmation page.">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="callback-page">
+      <section class="panel callback-panel">
+        <p class="eyebrow">Account</p>
+        <h1>Confirmed</h1>
+        <p>
+          Your TF.ai account is ready. Return to the app and sign in with the
+          email and password you used during registration.
+        </p>
+        <a class="button primary" href="index.html">Open docs</a>
+      </section>
+    </main>
+    <script>
+      if (window.location.hash || window.location.search) {
+        window.history.replaceState(null, document.title, window.location.pathname);
+      }
+    </script>
+  </body>
+</html>
